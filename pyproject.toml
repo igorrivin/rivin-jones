@@ -1,0 +1,47 @@
+[build-system]
+requires = ["maturin>=1.16,<2"]
+build-backend = "maturin"
+
+[project]
+name = "rivin-jones"
+dynamic = ["version"]
+description = "Exact ordinary and colored Jones polynomials with sparse root-of-unity evaluation"
+readme = "README.md"
+requires-python = ">=3.10,<3.14"
+authors = [{name = "Igor Rivin"}]
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md", "licenses/**/*"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Mathematics",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Rust",
+]
+dependencies = ["cotengra>=0.8.3,<0.9"]
+
+[project.optional-dependencies]
+plot = ["matplotlib>=3.7"]
+tensor = ["numpy>=1.26"]
+
+[project.urls]
+Repository = "https://github.com/igorrivin/rivin-jones"
+Issues = "https://github.com/igorrivin/rivin-jones/issues"
+Source = "https://github.com/igorrivin/rivin-jones/releases"
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+python-source = "python"
+module-name = "rivin_jones._tl_tensor"
+include = [
+  {path = "LICENSE_STATUS.md", format = ["sdist", "wheel"]},
+  {path = "THIRD_PARTY_NOTICES.md", format = ["sdist", "wheel"]},
+  {path = "licenses/**/*", format = ["sdist", "wheel"]},
+  {path = "tests/**/*", format = "sdist"},
+  {path = "docs/**/*", format = "sdist"},
+  {path = "tools/**/*", format = "sdist"},
+  {path = "examples/**/*", format = "sdist"},
+  {path = "vendor/**/*", format = "sdist"},
+  {path = ".cargo/config.toml", format = "sdist"},
+]
+exclude = ["**/._*", "**/.DS_Store", "**/__pycache__/**", "**/*.pyc", "dist/**", "target/**", ".git/**"]

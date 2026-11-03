@@ -1,0 +1,26 @@
+{
+  "version": "0.1.0",
+  "source_requirements": [
+    {
+      "description": "Inherited implementation redistribution terms",
+      "status": "resolved",
+      "license": "CC0-1.0"
+    },
+    {
+      "description": "Project license selected by the author",
+      "status": "resolved",
+      "license": "GPL-3.0-or-later"
+    },
+    {
+      "description": "Dependency notices and complete source/rebuild distribution strategy",
+      "status": "resolved",
+      "details": "THIRD_PARTY_NOTICES.md and docs/REBUILDING.md"
+    }
+  ],
+  "distribution_requirements": {
+    "complete_source": "Enforced by tools/check_distribution.py --public on the release sdist",
+    "hosted_validation": "Required successful distributions.yml run at the exact release commit",
+    "artifact_identity": "publish.yml verifies the successful run and SHA256SUMS.json before publishing its unchanged artifacts",
+    "public_installation": "publish.yml verifies public PyPI hashes and installs the public wheel after upload"
+  }
+}

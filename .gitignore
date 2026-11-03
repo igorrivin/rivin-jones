@@ -1,0 +1,16 @@
+._*
+.DS_Store
+__pycache__/
+*.py[cod]
+*.so
+*.dylib
+*.pyd
+target/
+dist/
+.venv/
+build/
+*.egg-info/
+.pytest_cache/
+local-results/
+vendor/
+.cargo/config.toml

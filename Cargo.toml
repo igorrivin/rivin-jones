@@ -1,0 +1,23 @@
+[package]
+name = "rivin-jones"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+description = "Exact ordinary and colored Jones polynomial computation"
+repository = "https://github.com/igorrivin/rivin-jones"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "tl_tensor"
+crate-type = ["cdylib"]
+
+[dependencies]
+dashmap = "6.1.0"
+num_cpus = "1.16.0"
+pyo3 = { version = "0.23.3", features = ["num-bigint"] }
+num-bigint = "0.4"
+num-traits = "*"
+series = "0.13.0"
+rug = { version = "1.26.1", features = ["integer", "num-traits", "std"], default-features = false }
+indicatif = "0.17.9"
+rayon = "1.10.0"

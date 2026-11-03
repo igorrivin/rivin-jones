@@ -1,0 +1,27 @@
+{
+  "inherited_source_license": "CC0-1.0",
+  "license_status": "maintainer confirmation verified 2026-11-03; voluntary attribution omitted at maintainer request",
+  "source_hash_scope": "Historical pre-export source hashes, not hashes of the current public-facing documentation or renamed package paths.",
+  "source_candidate_manifest_sha256": "5b5110719dbc4df5b4982e13aab765335d4b3108c51f35d3c424724d086611fd",
+  "fixture_sources": {
+    "colored_audit_sha256": "dacc1adc63cf2626a98c4e3d458132a05dd03854ae84a0fe547aafebef7d0acb",
+    "ordinary_benchmarks": {
+      "retained": "1f15c7c868deabddb717a683a741ce9e2c2b97f0e4c63a94022af8954ad08f35",
+      "extended": "e689cd6afd0b3cb90743ca7c395e1392723457d35355fb879530c5e3ffb05752",
+      "heldout": "b9c9fbe7b31cb0a1cb8d80f6ed2b4f144fa2467f9548bdb1e2a84a776ba24bb4"
+    }
+  },
+  "exported_algorithm_files": {
+    "Cargo.toml": "faa7342975de0470d7fd0f2ad51dbf4e93ea020d51a9a037ae3b7627ecddd670",
+    "pyproject.toml": "e26e33d608c6121ca9e77709a067d303802d2585e59a63e989399116f4206283",
+    "Cargo.lock": "acf73093a347efcb370107ef40e0cb04d14e74ba987d299db9261665c8400115",
+    "README.md": "2ccadf1fdae6c71339f81a259eedba7ba94cb267512359d387381ae0b16db431",
+    ".gitignore": "82aa13d9df8b20dd77c7f4bb2cf113c9ffc8fbee74a8c8351364a944e8583f5f",
+    "src/lib.rs": "96da6ef96312b789b4f81c6e982a8c250a90b89dbdb8bd7b753e1633ffee243e",
+    "src/laurent.rs": "cb283bc74e424df5ca81bb531a5cba301a59fc7406806df6b13c6f77449467e2",
+    "src/frontier.rs": "6c6aee926b738c089daeef55c5804f34bd3ce6b7636bafe5dec271d3bd1a407f",
+    "python/tl_tensor/colored.py": "8006cad9b5fe00c64cc2c00394ce6110e8136b8cbbc5a8f7717bd197df21e926",
+    "python/tl_tensor/__init__.py": "45d3ca0e7eb131678e9a0efc164314ead228896f02bb5d620f25030b4983efcb",
+    "python/tl_tensor/r_matrix.py": "b6c5b48a9094587faa2ea6a9467ff801d838cfb007974a0fcd22a6e11aabfa76"
+  }
+}
