@@ -1,0 +1,34 @@
+name: Initialize public source
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: initialize-public-source
+jobs:
+  unpack:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify and unpack the reviewed public export
+        run: |
+          python - <<'PYCODE'
+          import base64, hashlib, io, pathlib, tarfile
+          data = base64.b64decode(pathlib.Path('public-source.tar.gz.b64').read_bytes())
+          assert hashlib.sha256(data).hexdigest() == '97599383066c4b8a8689b6c9d95e8f0ddfe37d7bcb1eda54aa002261fd0c2379'
+          with tarfile.open(fileobj=io.BytesIO(data), mode='r:gz') as archive:
+              for member in archive.getmembers():
+                  path = pathlib.PurePosixPath(member.name)
+                  assert member.isfile() and not path.is_absolute() and '..' not in path.parts
+                  assert path.parts[0] not in ('.git', '.github', 'vendor')
+              archive.extractall('.', filter='data')
+          PYCODE
+          python tools/release_gate.py
+      - name: Commit public source without private history
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm public-source.tar.gz.b64
+          git add .
+          git commit -m 'Publish rivin-jones source under GPL-3.0-or-later'
+          git push origin HEAD:main
+          git rev-parse HEAD >> "$GITHUB_STEP_SUMMARY"
