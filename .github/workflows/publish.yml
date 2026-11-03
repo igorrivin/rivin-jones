@@ -1,0 +1,128 @@
+name: Publish tested release
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful distributions workflow run ID at the current main commit
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Require successful validation of this exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" > validated-run.json
+          python - <<'PYCODE'
+          import json, os
+          run = json.load(open('validated-run.json'))
+          assert run['conclusion'] == 'success' and run['status'] == 'completed'
+          assert run['head_sha'] == os.environ['SOURCE_COMMIT']
+          assert run['head_branch'] == 'main'
+          assert run['path'] == '.github/workflows/distributions.yml'
+          assert run['repository']['full_name'] == os.environ['GITHUB_REPOSITORY']
+          PYCODE
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-distributions
+          path: bundle
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+      - name: Verify hashes and complete source
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          python tools/release_gate.py
+          python tools/release_manifest.py verify bundle --commit "$SOURCE_COMMIT" --run-id "$RUN_ID"
+          python tools/check_distribution.py --public bundle/*.whl bundle/*.tar.gz
+          mkdir dist
+          cp bundle/*.whl bundle/*.tar.gz dist/
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pypi-ready
+          path: dist/*
+          if-no-files-found: error
+
+  pypi:
+    needs: verify
+    runs-on: ubuntu-24.04
+    environment:
+      name: pypi
+      url: https://pypi.org/project/rivin-jones/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: pypi-ready
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  verify-public-installation:
+    needs: pypi
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-distributions
+          path: bundle
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+      - run: python tools/verify_pypi.py bundle/SHA256SUMS.json
+      - name: Install from the public index into a clean environment
+        run: |
+          python -m venv public-install
+          public-install/bin/python -m pip install --index-url https://pypi.org/simple --only-binary=rivin-jones 'rivin-jones[tensor]==0.1.0'
+          public-install/bin/python -m unittest discover -s tests -v
+          public-install/bin/python -m pip check
+      - uses: actions/upload-artifact@v7
+        with:
+          name: public-verification
+          path: public-verification.json
+
+  github-release:
+    needs: verify-public-installation
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-distributions
+          path: bundle
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+      - name: Publish source, wheels and hashes on GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: gh release create v0.1.0 --repo "$GITHUB_REPOSITORY" --target "$SOURCE_COMMIT" --title 'rivin-jones 0.1.0' --notes-file docs/RELEASE_0_1_0.md bundle/*
