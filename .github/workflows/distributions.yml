@@ -1,0 +1,139 @@
+name: Build and test distributions
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['public-source.tar.gz', '.github/workflows/bootstrap.yml']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: python -m pip install maturin==1.16.0 twine
+      - name: Prepare complete corresponding source
+        run: |
+          python tools/release_gate.py
+          python tools/prepare_vendor.py
+          python tools/build_sdist.py --out dist
+          python tools/check_distribution.py --public dist/*.tar.gz
+          python -m twine check dist/*
+      - uses: actions/upload-artifact@v7
+        with:
+          name: complete-source
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  wheels:
+    needs: source
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, macos-15-intel]
+        python:
+          - {version: '3.10', abi: '310'}
+          - {version: '3.11', abi: '311'}
+          - {version: '3.12', abi: '312'}
+          - {version: '3.13', abi: '313'}
+    steps:
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python.version }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: complete-source
+          path: archive
+      - name: Extract the release source
+        shell: bash
+        run: |
+          mkdir source dist
+          tar -xzf archive/*.tar.gz -C source --strip-components=1
+      - name: Build portable Linux wheel from included sources
+        if: runner.os == 'Linux'
+        uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: '1.16.0'
+          working-directory: source
+          manylinux: '2014'
+          command: build
+          args: --release --locked --offline --interpreter /opt/python/cp${{ matrix.python.abi }}-cp${{ matrix.python.abi }}/bin/python --out ../dist
+          before-script-linux: rustc --version && cargo --version && cc --version
+      - name: Build macOS wheel from included sources
+        if: runner.os == 'macOS'
+        working-directory: source
+        run: |
+          python -m pip install maturin==1.16.0
+          rustc --version
+          cargo --version
+          cc --version
+          maturin build --release --locked --offline --interpreter python --out ../dist
+      - name: Inspect, install and test the exact wheel
+        working-directory: source
+        shell: bash
+        run: |
+          python -m pip install twine
+          python -m twine check ../dist/*
+          python tools/check_distribution.py --public ../dist/*
+          python -m pip install ../dist/*.whl
+          python -m unittest discover -s tests -v
+          python -m pip check
+          python -m pip install 'numpy>=1.26'
+          python -m unittest discover -s tests -p test_tensor.py -v
+          python -m pip check
+          python -m pip freeze
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheel-${{ matrix.os }}-${{ matrix.python.version }}
+          path: dist/*.whl
+          if-no-files-found: error
+
+  candidate:
+    needs: [source, wheels]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: wheel-*
+          path: dist
+          merge-multiple: true
+      - uses: actions/download-artifact@v8
+        with:
+          name: complete-source
+          path: dist
+      - name: Record the tested artifact set
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          python tools/check_distribution.py --public dist/*.whl dist/*.tar.gz
+          python tools/release_manifest.py create dist --commit "$SOURCE_COMMIT" --run-id "$RUN_ID"
+          cat dist/SHA256SUMS.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-distributions
+          path: dist/*
+          if-no-files-found: error
+      - name: Save a cloneable copy of the public repository
+        run: git bundle create public-repository.bundle --all
+      - uses: actions/upload-artifact@v7
+        with:
+          name: public-repository-bundle
+          path: public-repository.bundle
